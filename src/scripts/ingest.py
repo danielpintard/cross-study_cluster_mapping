@@ -1,7 +1,7 @@
 # Description: takes in directories containing NS-Forest results and respective datasets and produces matrix, barcodes, features and cell type gene
 # marker information to be used in producing SingleCellExperiment a object for FR-Match. 
 
-# [ ] TODO: refactor to accept sample sheet from args and encode associated args with dataset runs in sheet
+# [x] TODO: refactor to accept sample sheet from args and encode associated args with dataset runs in sheet
 
 import scanpy as sc
 import numpy as np
@@ -24,7 +24,7 @@ parser.add_argument("--sheet_path", required=True, type=str, help="path to sampl
 parser.add_argument("--tmpdir", type=str, required=True, help = "Parent/root dir to temporary space for holding intermediate files. On Biowulf, set $TMPDIR to lscratch space.")
 args = parser.parse_args()
 sheet_path = args.sheet_path
-tmp_dir = args.tmp_dir
+tmp_dir = args.tmpdir
 
 # parser.add_argument("--data_ids", type=str, required=True, help="Array of strings used to ID the datasets. Should include unique strings for identifying respective results folder")
 # # NOTE: I think this should allow for multiple inputs at once ^
@@ -82,14 +82,17 @@ def adata_checks(h5ad_path, cxg, var_col):
 
 def make_sce_obj_files(adata, cluster_header, out_dir, data_id, mkr_info_dir, include_fscores, include_dendrogram):
     
+    os.makedirs(out_dir, exist_ok=True)
     frmatch_files_dir =  os.path.join(out_dir, f'{data_id}_FRMatch_files/')
+    print(f"Producing files for {data_id}. Saving to {frmatch_files_dir}")
+    
     # write cluster labels for each barcode to file
-    adata.obs[cluster_header].to_csv(os.path.join(frmatch_files_dir, f'{data_id}_clusters.csv', index = False))
+    adata.obs[cluster_header].to_csv(os.path.join(frmatch_files_dir, f'clusters.csv', index = False))
     
     # write cxg matrix to file - writing in chunks to combat memory spikes
     chunk_sz = 2500
     total_cells = adata.shape[0]
-    with open(os.path.join(frmatch_files_dir, f'{data_id}_matrix.csv', 'w')) as f:
+    with open(os.path.join(frmatch_files_dir, f'matrix.csv', 'w')) as f:
         f.write("," + ",".join(adata.var_names) + "\n")
         for i in range(0, total_cells, chunk_sz):
             end = min(i + chunk_sz, total_cells)   
@@ -101,10 +104,10 @@ def make_sce_obj_files(adata, cluster_header, out_dir, data_id, mkr_info_dir, in
     # write marker genes per cluster to csv
     markers = pd.read_csv(os.path.join(mkr_info_dir, f'{data_id}_results', 'tables', 'combined_markers_eval_results.csv')) 
     markers_series = pd.Series(markers['markers'].values, index = markers['clusterName'])
-    markers_series.to_csv(os.path.join(frmatch_files_dir, f'{data_id}_markers.csv'))
+    markers_series.to_csv(os.path.join(frmatch_files_dir, f'markers.csv'))
     if include_fscores: 
        markers_fscores = pd.Series(markers['f_score'].values, index = markers['clusterName'])
-       markers_fscores.to_csv(os.path.join(frmatch_files_dir, f'{data_id}_fscores.csv'))
+       markers_fscores.to_csv(os.path.join(frmatch_files_dir, f'fscores.csv'))
     if include_dendrogram:
         if "X_pca" not in adata.obsm:
             print("No `X_pca` is .obsm, calculating...")
@@ -114,7 +117,7 @@ def make_sce_obj_files(adata, cluster_header, out_dir, data_id, mkr_info_dir, in
         
         print("running sc.tl.dendrogram...")
         sc.tl.dendrogram(adata, groupby=cluster_header, use_rep="X_pca", use_raw=False)
-        dendro_file_path = os.path.join(frmatch_files_dir, f'{data_id}_dendrogram.csv')
+        dendro_file_path = os.path.join(frmatch_files_dir, f'dendrogram.csv')
         dendro_key = f"dendrogram_{cluster_header}"
         order = adata.uns[dendro_key]['categories_order']
         with open(dendro_file_path, 'w') as f:
@@ -138,15 +141,10 @@ for _, row in sample_sheet.iterrows():
     cluster_header = row['cluster_header_arg']
     print(f"Checking adata for {data_id} at {h5ad_path}...\n")
     adata = adata_checks(h5ad_path, cxg=cxg_flag, var_col=var_col)
-    
-    out_dir = os.path.join(tmp_dir, f"{data_id}_files")
-    print(f"Producing files for {data_id}. Saving to {out_dir}")
-    make_sce_obj_files(adata, cluster_header=cluster_header, out_dir=out_dir, data_id=data_id,
+    make_sce_obj_files(adata, cluster_header=cluster_header, out_dir=tmp_dir, data_id=data_id,
                        mkr_info_dir=markers_path, include_fscores=True, include_dendrogram=True)
+    out_dir = os.path.join(tmp_dir, f'{data_id}_FRMatch_files/')
+    # NOTE: FOR TESTING
+    if os.path.exists(out_dir): print(f"tmpdir exists and contains: \n{os.listdir(out_dir)}")
     
 
-
-# for dataset in data_ids:
-#     # for loop that loops thru data ids and reads in data and associated args with that data for ingest
-#         # yeah I think doing this with a sample sheet will be easier and we can probably bypass needing argparse
-#     pass

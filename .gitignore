@@ -7,3 +7,4 @@
 *.err
 slurm-*.out
 slurm-*.err
+test_*

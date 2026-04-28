@@ -27,6 +27,7 @@ dependencies:
   - r-mass
   - r-httpuv
   - r-mclust
+  - r-seurat
   - bioconductor-singlecellexperiment
   - bioconductor-summarizedexperiment
   - bioconductor-genomicranges
