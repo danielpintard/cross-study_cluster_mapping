@@ -7,7 +7,7 @@
 
 SHEET_PATH=""
 TMPDIR=/lscratch/$SLURM_JOB_ID
-# RESULTS_PATH="../results/${DATA_ID}_results"
+RESULTS_PATH="../results/${DATA_ID}_results"
 
 # read args from CL
 while [[ $# -gt 0 ]]; do
@@ -29,5 +29,5 @@ source myconda; conda activate frmatch_env
 # INCLUDE RUN LOG WRITING LOGIC
 
 #### DATA INGEST ####
-python scripts/ingest.py --sheet_path "$SHEET_PATH" --tmpdir "$TMP_DIR"
+python scripts/ingest.py --sheet_path "$SHEET_PATH" --tmpdir "$TMPDIR"
 

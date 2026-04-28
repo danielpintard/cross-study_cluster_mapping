@@ -87,7 +87,7 @@ def make_sce_obj_files(adata, cluster_header, out_dir, data_id, mkr_info_dir, in
     print(f"Producing files for {data_id}. Saving to {frmatch_files_dir}")
     
     # write cluster labels for each barcode to file
-    adata.obs[cluster_header].to_csv(os.path.join(frmatch_files_dir, f'clusters.csv', index = False))
+    adata.obs[cluster_header].to_csv(os.path.join(frmatch_files_dir, f'clusters.csv') , index = False)
     
     # write cxg matrix to file - writing in chunks to combat memory spikes
     chunk_sz = 2500

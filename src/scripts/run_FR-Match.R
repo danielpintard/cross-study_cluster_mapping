@@ -25,6 +25,8 @@ dirs <- list.dirs(path=fr_match_dirs_path, full.names = TRUE) # list of dirs con
 # scratch ground start #
 dir <- "/data/pintardde/class_marker_pipeline/results/HLCA_Core_results/tables/"
 markers_info <- fread(paste0(dir, "combined_markers_eval_results.csv"))
+
+sub("_[^_]+$", "", "HLCA_Core_results")
 # scratch ground end #
 
 # FUTURE:
@@ -56,13 +58,35 @@ create_sce_object <- function(dir_path) {
     return list("standard_sce"=sce.obj, "normalized_sce"=sce.obj.norm) # [ ] TODO: check if this is even possible to return more than one object in R functions
 
 run_FRMatch <- function(sce.query, sce.ref, query_id, ref_id) {
-    print(sprintf("Running FRMatch test in reference: %ref_id -> query: %query_id mapping direction", ref_if, query_id))
+    print(sprintf("Running FRMatch test in reference: %s -> query: %s mapping direction", ref_id, query_id))
     query_to_ref <- FRMatch(sce.query = sce.query, sce.ref = sce.ref, subsamp.size = 15) 
-    print("Running FRMatch test in query: %query_id -> reference: %ref_id mapping direction")
+    print(sprintf("Running FRMatch test in query: %s -> reference: %s mapping direction", query_id, ref_id))
     ref_to_query <- FRMatch(sce.query = sce.ref, sce.ref = sce.query, subsamp.size = 15)
 }
 
-# using create_sce_object, loop through
+# using create_sce_object, loop through dirs and run FR-Match on non-duplicative, pairwise combinations of datasets being mapped onto each other
+# adatas <- () # initialize empty list ? \_("/)_/ idk
+
+
+# TODO: W.I.P. 
+"""
+I think the logic should switch to looping through dirs to create 
+sce_objs to store and then we retreive those stored objs from mem to run FRMatch
+"""
+# for (dir1 in dirs) {
+#     data_id1 = sub("_[^_]+$", "", dir1) # regex to ID last underscore and chars behind it and remove it
+#     for (dir2 in dirs) {
+#         if data_id1 == sub("_[^_]+$", "", dir2) {
+#             # if the datasets are identical, skip
+#             next
+#         }
+#         else {
+#             # if they are not identical, continue
+#             data_id2 = sub("_[^_]+$", "", dir2)
+
+#         }
+#     }
+# } 
 
 # define where data is stored and create of list dirs
 
