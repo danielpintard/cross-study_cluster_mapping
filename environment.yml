@@ -1,0 +1,37 @@
+name: frmatch_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.10
+  - numpy
+  - pandas
+  - matplotlib
+  - scikit-learn
+  - seaborn
+  - jupyterlab
+  - nbconvert
+  - plotly
+  - pip
+  - r-base=4.2.2
+  - r-dplyr
+  - r-data.table
+  - r-tibble
+  - r-shiny
+  - r-pbmcapply
+  - r-remotes
+  - r-devtools
+  - r-igraph
+  - r-ade4
+  - r-mass
+  - r-httpuv
+  - r-mclust
+  - bioconductor-singlecellexperiment
+  - bioconductor-summarizedexperiment
+  - bioconductor-genomicranges
+  - bioconductor-iranges
+  - bioconductor-s4vectors
+  - bioconductor-biobase
+  - scanpy
+  - anndata
