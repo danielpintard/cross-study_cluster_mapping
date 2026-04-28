@@ -41,7 +41,6 @@ create_sce_object <- function(dir_path) {
     NSF_formatted_mkrs <- markers_info %>% select(clusterName, markers) %>% mutate(markers = gsub("\\[|\\]|\\'| ", "", markers)) %>%
         separate_rows(markers, sep = ",") %>% as.data.frame()
     
-
     sce.obj <- make_data_object(
         dat = mtx,
         tab = cluster_info,
@@ -55,6 +54,12 @@ create_sce_object <- function(dir_path) {
 
     print(sprintf("Data read from %s, SCE object created...", dir_path))
     return list("standard_sce"=sce.obj, "normalized_sce"=sce.obj.norm) # [ ] TODO: check if this is even possible to return more than one object in R functions
+
+run_FRMatch <- function(sce.query, sce.ref, query_id, ref_id) {
+    print(sprintf("Running FRMatch test in reference: %ref_id -> query: %query_id mapping direction", ref_if, query_id))
+    query_to_ref <- FRMatch(sce.query = sce.query, sce.ref = sce.ref, subsamp.size = 15) 
+    print("Running FRMatch test in query: %query_id -> reference: %ref_id mapping direction")
+    ref_to_query <- FRMatch(sce.query = sce.ref, sce.ref = sce.query, subsamp.size = 15)
 }
 
 # using create_sce_object, loop through
