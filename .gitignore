@@ -6,3 +6,4 @@
 slurm-*.out
 slurm-*.err
 test_*
+input_args.csv
