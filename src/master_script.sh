@@ -30,4 +30,21 @@ source myconda; conda activate frmatch_env
 
 #### DATA INGEST ####
 python scripts/ingest.py --sheet_path "$SHEET_PATH" --tmpdir "$TMPDIR"
+R scripts/run_FR-Match.R "$SLURM_SUBMIT_DIR" "$TMPDIR" "$RESULTS_PATH" 
 
+#################### FOR TESTING PURPOSES ####################
+cd $TMPDIR || exit
+
+subdirs=(*/)
+first_subdir="${subdirs[0]}"
+
+cd "$first_subdir" || exit
+echo pwd
+
+for file in *; do
+    if [ -f "$file" ]; then
+        echo "--- File: $file ---"
+        head -n 5 "$file"
+        echo -e "\n"
+    fi
+done

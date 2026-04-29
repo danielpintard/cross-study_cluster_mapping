@@ -82,27 +82,30 @@ def adata_checks(h5ad_path, cxg, var_col):
 
 def make_sce_obj_files(adata, cluster_header, out_dir, data_id, mkr_info_dir, include_fscores, include_dendrogram):
     
-    os.makedirs(out_dir, exist_ok=True)
     frmatch_files_dir =  os.path.join(out_dir, f'{data_id}_FRMatch_files/')
+    os.makedirs(frmatch_files_dir, exist_ok=True)
     print(f"Producing files for {data_id}. Saving to {frmatch_files_dir}")
     
     # write cluster labels for each barcode to file
-    adata.obs[cluster_header].to_csv(os.path.join(frmatch_files_dir, f'clusters.csv') , index = False)
+    adata.obs[cluster_header].to_csv(os.path.join(frmatch_files_dir, f'clusters.csv'))
     
     # write cxg matrix to file - writing in chunks to combat memory spikes
     chunk_sz = 2500
     total_cells = adata.shape[0]
-    with open(os.path.join(frmatch_files_dir, f'matrix.csv', 'w')) as f:
+    with open(os.path.join(frmatch_files_dir, f'matrix.csv'), 'w') as f:
         f.write("," + ",".join(adata.var_names) + "\n")
         for i in range(0, total_cells, chunk_sz):
             end = min(i + chunk_sz, total_cells)   
             chunk_X = adata.X[i:end] 
             dense_chunk = chunk_X.toarray() if sp.issparse(chunk_X) else chunk_X
-            chunk_df = pd.DataFrame(dense_chunk, index=adata.obs_name[i:end])
+            chunk_df = pd.DataFrame(dense_chunk, index=adata.obs_names[i:end])
             chunk_df.to_csv(f, header=False, index=True)
     
     # write marker genes per cluster to csv
-    markers = pd.read_csv(os.path.join(mkr_info_dir, f'{data_id}_results', 'tables', 'combined_markers_eval_results.csv')) 
+    markers = pd.read_csv(os.path.join(mkr_info_dir, 'tables', 
+                                       'combined_markers_eval_results.csv' # could perhaps consider creating sample sheets with final file name already in path
+                                       )
+                          ) 
     markers_series = pd.Series(markers['markers'].values, index = markers['clusterName'])
     markers_series.to_csv(os.path.join(frmatch_files_dir, f'markers.csv'))
     if include_fscores: 
