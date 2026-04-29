@@ -22,7 +22,7 @@ results_base_dir <- args[3]
 print(sprintf("Working out of: '%s'", working_dir))
 setwd(working_dir)
 
-dirs <- list.dirs(path=fr_match_dirs_path, full.names = TRUE) # list of dirs containing data files to create sce_objects
+dirs <- list.dirs(path=fr_match_dirs_path, full.names = TRUE, recursive = FALSE) # list of dirs containing data files to create sce_objects
 folder_names <- basename(dirs)
 data_ids <- sub("_FRMatch_files$", "", folder_names)
 dir_id_map <- setNames(dirs, data_ids)
@@ -30,11 +30,11 @@ dir_id_map <- setNames(dirs, data_ids)
 # FUTURE:
 # NOTE: consider creating conditional operations for whether or not fscore and cluster_order info will be included in cluster matching run
 create_sce_object <- function(dir_path) {
-    mtx <- fread(paste(dir_path, "matrix.csv"))
-    cluster_info <- fread(paste(dir_path, "clusters.csv"))
-    markers_info <- fread(paste(dir_path, "markers.csv"))
-    fscores <- fread(paste(dir_path, "fscores.csv"))
-    dendro_order <- fread(paste(dir_path, "dendrogram.csv"))
+    mtx <- fread(file.path(dir_path, "matrix.csv"))
+    cluster_info <- fread(file.path(dir_path, "clusters.csv"))
+    markers_info <- fread(file.path(dir_path, "markers.csv"))
+    fscores <- fread(file.path(dir_path, "fscores.csv"))
+    dendro_order <- fread(file.path(dir_path, "dendrogram.csv"))
     unique_markers <- unique(markers_info$markers)
     
     # format + explode markers and associated cluster information
@@ -63,24 +63,27 @@ run_FRMatch <- function(sce.query.norm, sce.ref.norm, query_id, ref_id, res_base
     print(sprintf("Running FRMatch test in query: %s -> reference: %s mapping direction", query_id, ref_id))
     rst.ref_to_query <- FRmatch(sce.query = sce.ref.norm, sce.ref = sce.query.norm, subsamp.size = 15)
 
+    
     ############################################ PLOTTING AND STORING RESULTS ############################################
+    res_dir <- sprintf("%s/%s_to_%s_mapping", res_base_dir, ref_id, query_id)
+    dir.create(res_dir, recursive = TRUE, showWarnings = FALSE)
     #### plot where E1/reference is x axis and E2/query data is y axis ####
     #plot one-way and two-way match results
     match_matrix <- plot_bi_FRmatch(
         rst.ref_to_query, rst.query_to_ref, 
         name.E1 = ref_id, name.E2 = query_id, 
-        filename = sprintf("%s/%s_to_%s_mapping/%s_to_%s_bidir_plot_E1E2.png",res_base_dir, ref_id, query_id), return.value = TRUE
+        filename = sprintf("%s/%s_to_%s_bidir_plot_E1E2.png", res_dir, ref_id, query_id), return.value = TRUE
         ) 
 
     # plot two-way results only
     plot_bi_FRmatch(
         rst.ref_to_query, rst.query_to_ref, 
         name.E1 = ref_id, name.E2 = query_id, two.way.only = TRUE, 
-        filename = sprintf("%s/%s_to_%s_mapping/%s_to_%s_bidir_plot(two-way)_E1E2.png", res_base_dir, ref_id, query_id)
+        filename = sprintf("%s/%s_to_%s_bidir_plot(two-way)_E1E2.png", res_dir, ref_id, query_id)
         ) 
     
     match_df <- get_values(match_matrix)
-    map_filename <- sprintf("%s/%s_to_%s_mapping/s%_to_%s_FRMatch_mapping_results.csv", res_base_dir, ref_id, query_id)
+    map_filename <- sprintf("%s/%s_to_%s_FRMatch_mapping_results.csv", res_dir, ref_id, query_id)
     write.csv(match_df, file = map_filename, row.names = FALSE)
     print(sprintf("Saved mapping results to %s", map_filename))
 
@@ -88,7 +91,7 @@ run_FRMatch <- function(sce.query.norm, sce.ref.norm, query_id, ref_id, res_base
     #plot one-way and two-way match results
     plot_bi_FRmatch(
         rst.query_to_ref, rst.ref_to_query,
-        name.E1 = query_id, name.E2 = ref_id, filename = sprintf("%s/%s_to_%s_mapping/%s_to_%s_matching_E2E1.png", res_base_dir, 
+        name.E1 = query_id, name.E2 = ref_id, filename = sprintf("%s/%s_to_%s_matching_E2E1.png", res_dir, 
         ref_id, query_id, # since we want these plots to still get saved in the same results file
         query_id, ref_id)
         ) 
@@ -96,7 +99,7 @@ run_FRMatch <- function(sce.query.norm, sce.ref.norm, query_id, ref_id, res_base
     plot_bi_FRmatch(
         rst.query_to_ref, rst.ref_to_query,
         name.E1 = query_id, name.E2 = ref_id, two.way.only = TRUE, 
-        filename = sprintf("%s/%s_to_%s_mapping/%s_to_%s_matching_(two-way)_E2E1.png", res_base_dir, 
+        filename = sprintf("%s/%s_to_%s_matching_(two-way)_E2E1.png", res_dir, 
         ref_id, query_id, # since we want these plots to still get saved in the same results file
         query_id, ref_id)
         ) 
@@ -119,7 +122,7 @@ dataset_ids <- names(adatas) # get keys/names/ids from named vector
 num_ds <- length(dataset_ids)
 
 for (i in 1:(num_ds - 1)) {
-    for (j in (i + 1):num_datasets) {
+    for (j in (i + 1):num_ds) {
         id1 <- dataset_ids[i]
         id2 <- dataset_ids[j]
 
