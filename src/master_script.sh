@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --mem=120g
-#SBATCH --cpus-per-task=80
-#SBATCH --time=3:00:00
-#SBATCH --gres=lscratch:120
-#SBATCH --job-name="testing2_cross-study_cluster_matching"
+#SBATCH --mem=200g
+#SBATCH --cpus-per-task=64
+#SBATCH --time=12:00:00
+#SBATCH --gres=lscratch:200
+#SBATCH --job-name="1st_run_cross-study_cluster_matching"
 
 SHEET_PATH=""
 TMPDIR=/lscratch/$SLURM_JOB_ID
@@ -33,32 +33,10 @@ echo "Date: $(date)" >> "$RUN_LOG"
 echo "Slurm Job ID: $SLURM_JOB_ID" >> "$RUN_LOG"
 echo "Allocated Cores: $SLURM_CPUS_PER_TASK" >> "$RUN_LOG"
 echo "Allocated Memory: ${SLURM_MEM_PER_NODE}MB" >> "$RUN_LOG"
-echo "----------------------------------" >> "$RUN_LOG"
-echo "Data ID: $DATA_ID" >> "$RUN_LOG"
 echo "Sample Sheet Path: $SHEET_PATH" >> "$RUN_LOG"
 echo "==================================" >> "$RUN_LOG"
 
 #### DATA INGEST AND PIPELINE ####
 python scripts/ingest.py --sheet_path "$SHEET_PATH" --tmpdir "$TMPDIR"
-
-#################### FOR TESTING PURPOSES ####################
-cd $TMPDIR || exit
-
-subdirs=(*/)
-first_subdir="${subdirs[0]}"
-
-cd "$first_subdir" || exit
-pwd
-
-for file in *; do
-    if [ -f "$file" ]; then
-        FILE_SIZE=$(ls -lh "$file" | awk '{print $5}')
-        echo "--- File: $file, Size: $FILE_SIZE ---"
-        head -n 5 "$file"
-        echo -e "\n"
-    fi
-done
-#################### FOR TESTING PURPOSES ####################
-
 ROOT_DIR=$(dirname "$SLURM_SUBMIT_DIR")
 Rscript scripts/run_FR-Match.R "$ROOT_DIR" "$TMPDIR" "$RESULTS_PATH" "$SLURM_CPUS_PER_TASK"

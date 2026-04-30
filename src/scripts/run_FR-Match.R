@@ -17,7 +17,7 @@ if (length(args) == 0) {
 working_dir <- args[1] # should be root of dir so results get save in separate file
 fr_match_dirs_path <- args [2] # base path to tmpdir containing FR-Match file dirs for each dataset
 results_base_dir <- args[3]
-n_jobs <- args[4]
+n_jobs <- as.numeric(args[4])
 
 #Ensure proper working dir
 print(sprintf("Working out of: '%s'", working_dir))
@@ -125,6 +125,6 @@ for (i in 1:(num_ds - 1)) {
         sce1 <- adatas[[id1]]
         sce2 <- adatas[[id2]]
         print(sprintf("=== Running FR-Match on: %s and %s ===", id1, id2))
-        runFRMatch(sce.query.norm = sce1, sce.ref.norm = sce2, query_id = id1, ref_id = id2, res_base_dir = results_base_dir, n_cores = n_jobs)
+        run_FRMatch(sce.query.norm = sce1, sce.ref.norm = sce2, query_id = id1, ref_id = id2, res_base_dir = results_base_dir, n_cores = n_jobs)
     }
 }
