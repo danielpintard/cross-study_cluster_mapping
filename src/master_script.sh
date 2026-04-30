@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=64
 #SBATCH --time=12:00:00
 #SBATCH --gres=lscratch:200
-#SBATCH --job-name="1st_run_cross-study_cluster_matching"
+#SBATCH --job-name="cross-study_cluster_matching"
 
 SHEET_PATH=""
 TMPDIR=/lscratch/$SLURM_JOB_ID
