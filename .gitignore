@@ -6,3 +6,5 @@
 slurm-*.out
 slurm-*.err
 data
+# still deciding if I'll keep results in more finalized editions of repo
+results

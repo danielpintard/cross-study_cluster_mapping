@@ -1,8 +1,3 @@
-# Description: takes in directories containing NS-Forest results and respective datasets and produces matrix, barcodes, features and cell type gene
-# marker information to be used in producing SingleCellExperiment a object for FR-Match. 
-
-# [x] TODO: refactor to accept sample sheet from args and encode associated args with dataset runs in sheet
-
 import scanpy as sc
 import numpy as np
 import pandas as pd
@@ -11,40 +6,18 @@ import scipy.sparse as sp
 import os
 import argparse
 import warnings
+import concurrent.futures
 import gc
 
 warnings.filterwarnings('ignore')
 seed = 42 
 
-# considering submitting a sample sheet
-
 parser = argparse.ArgumentParser(description="Ingest scRNA-seq datasets. Input sample sheet with appropriate args for each dataset")
-###########
 parser.add_argument("--sheet_path", required=True, type=str, help="path to sample sheet. Use create_sample_sheet.ipynb to create sample sheet for input")
 parser.add_argument("--tmpdir", type=str, required=True, help = "Parent/root dir to temporary space for holding intermediate files. On Biowulf, set $TMPDIR to lscratch space.")
 args = parser.parse_args()
 sheet_path = args.sheet_path
 tmp_dir = args.tmpdir
-
-# parser.add_argument("--data_ids", type=str, required=True, help="Array of strings used to ID the datasets. Should include unique strings for identifying respective results folder")
-# # NOTE: I think this should allow for multiple inputs at once ^
-# parser.add_argument("--markers_path", type=str, required=True, help="root/parent path to access all datasets marker information")
-# parser.add_argument("--include_fscores", action='store_true', help="Indicate if an additional file containing NS-Forest F-Beta scores should be written")
-# parser.add_argument("--include_dendrogram", action='store_true', help="Indicate if an additional file containing a vector with the order of cell types from hiearchical clustering. When flag used, sc.tl.dendrogram is ran.")
-# parser.add_argument("--cluster_header", type=str, required=True, help = "Column name of adata.obs that contains cell type labels of interest")
-# parser.add_argument("--cxg", action="store_true", help="Indicate whether or not data is sourced from CellxGene. Omit if data not from CellxGene. This is to deal with how CellxGene organizes their adata.var")
-# parser.add_argument("--var_col", type=str, default="", help="Column in adata.var where gene symbols are held")
-
-
-# data_ids = args.data_ids # from arg parse
-# data_path = args.data_path # data_path from argparse
-# tmpdir = args.tmpdir # from argparse, it'll take TMPDIR to place data in scratch space
-# var_col = args.var_col # coming from argparse, colname - if left empty, it is var_names
-# cxg = args.cxg # cxg from argparse
-# cluster_header = args.cluster_header #from argparse
-# markers_path = args.markers_path
-# include_fscores = args.include_fscores
-# include_dendrogram = args.include_dendrogram
 
 #################### FUNCTION DEFINITIONS START ####################
 def adata_checks(h5ad_path, cxg, var_col):    
@@ -122,20 +95,14 @@ def make_sce_obj_files(adata, cluster_header, out_dir, data_id, mkr_info_dir, in
         sc.tl.dendrogram(adata, groupby=cluster_header, use_rep="X_pca", use_raw=False)
         dendro_file_path = os.path.join(frmatch_files_dir, f'dendrogram.csv')
         dendro_key = f"dendrogram_{cluster_header}"
-        order = adata.uns[dendro_key]['categories_order']
+        order = adata.uns[dendro_key]['categories_ordered']
         with open(dendro_file_path, 'w') as f:
             # NOTE: KEEP IN MIND that dendrogram order file being written with no header
             for label in order:
                 f.write(f"{label}\n")
-            
-#################### FUNCTION DEFINITIONS END ####################
-    
-#################### DATA INGEST AND PREPROCESSING ####################
-
-sample_sheet = pd.read_csv(sheet_path)
-
-for _, row in sample_sheet.iterrows():
-    # capture args from sample_sheet
+                
+def process_dataset(dataset_row, tmp_dir):
+    _, row = dataset_row
     data_id = row['data_id']
     h5ad_path = row['h5ad_path']
     markers_path = row['markers_path']
@@ -146,8 +113,35 @@ for _, row in sample_sheet.iterrows():
     adata = adata_checks(h5ad_path, cxg=cxg_flag, var_col=var_col)
     make_sce_obj_files(adata, cluster_header=cluster_header, out_dir=tmp_dir, data_id=data_id,
                        mkr_info_dir=markers_path, include_fscores=True, include_dendrogram=True)
-    out_dir = os.path.join(tmp_dir, f'{data_id}_FRMatch_files/')
     # NOTE: FOR TESTING
+    out_dir = os.path.join(tmp_dir, f'{data_id}_FRMatch_files/')
     if os.path.exists(out_dir): print(f"tmpdir exists and contains: \n{os.listdir(out_dir)}")
     
+#################### FUNCTION DEFINITIONS END ####################
+    
+#################### DATA INGEST AND PREPROCESSING START ####################
+sample_sheet = pd.read_csv(sheet_path)
+
+with concurrent.futures.ProcessPoolExecutor(max_workers=4) as executor:
+    futures = [executor.submit(process_dataset, row, tmp_dir) for row in sample_sheet.iterrows()]
+    for future in concurrent.futures.as_completed(futures):
+        future.result()
+
+# for _, row in sample_sheet.iterrows():
+#     # capture args from sample_sheet
+#     data_id = row['data_id']
+#     h5ad_path = row['h5ad_path']
+#     markers_path = row['markers_path']
+#     cxg_flag = row['cxg_flag']
+#     var_col = row['var_col_arg']
+#     cluster_header = row['cluster_header_arg']
+#     print(f"Checking adata for {data_id} at {h5ad_path}...\n")
+#     adata = adata_checks(h5ad_path, cxg=cxg_flag, var_col=var_col)
+#     make_sce_obj_files(adata, cluster_header=cluster_header, out_dir=tmp_dir, data_id=data_id,
+#                        mkr_info_dir=markers_path, include_fscores=True, include_dendrogram=True)
+#     out_dir = os.path.join(tmp_dir, f'{data_id}_FRMatch_files/')
+#     # NOTE: FOR TESTING
+#     if os.path.exists(out_dir): print(f"tmpdir exists and contains: \n{os.listdir(out_dir)}")
+    
+#################### DATA INGEST AND PREPROCESSING END ####################    
 

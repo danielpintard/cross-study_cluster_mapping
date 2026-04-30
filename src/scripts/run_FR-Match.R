@@ -14,9 +14,10 @@ if (length(args) == 0) {
     stop("At least one argument must be supplied", call. = False)
 }
 
-working_dir <- args[1] # should be src/scripts/
+working_dir <- args[1] # should be root of dir so results get save in separate file
 fr_match_dirs_path <- args [2] # base path to tmpdir containing FR-Match file dirs for each dataset
 results_base_dir <- args[3]
+n_jobs <- args[4]
 
 #Ensure proper working dir
 print(sprintf("Working out of: '%s'", working_dir))
@@ -30,11 +31,12 @@ dir_id_map <- setNames(dirs, data_ids)
 # FUTURE:
 # NOTE: consider creating conditional operations for whether or not fscore and cluster_order info will be included in cluster matching run
 create_sce_object <- function(dir_path) {
+    print(sprintf("creating sce_obj with files from %s", dir_path))
     mtx <- fread(file.path(dir_path, "matrix.csv"))
     cluster_info <- fread(file.path(dir_path, "clusters.csv"))
     markers_info <- fread(file.path(dir_path, "markers.csv"))
     fscores <- fread(file.path(dir_path, "fscores.csv"))
-    dendro_order <- fread(file.path(dir_path, "dendrogram.csv"))
+    dendro_order <- fread(file.path(dir_path, "dendrogram.csv"), header = FALSE)[[1]]
     unique_markers <- unique(markers_info$markers)
     
     # format + explode markers and associated cluster information
@@ -54,14 +56,15 @@ create_sce_object <- function(dir_path) {
 
     print(sprintf("Data read from %s, SCE object created...", dir_path))
     return(sce.obj.norm)
+}
 
-run_FRMatch <- function(sce.query.norm, sce.ref.norm, query_id, ref_id, res_base_dir) {
+run_FRMatch <- function(sce.query.norm, sce.ref.norm, query_id, ref_id, res_base_dir, n_cores) {
 
     ############################################ RUNNING FR TEST ############################################
     print(sprintf("Running FRMatch test in reference: %s -> query: %s mapping direction", ref_id, query_id))
-    rst.query_to_ref <- FRmatch(sce.query = sce.query.norm, sce.ref = sce.ref.norm, subsamp.size = 15) 
+    rst.query_to_ref <- FRmatch(sce.query = sce.query.norm, sce.ref = sce.ref.norm, subsamp.size = 15, numCores = n_cores) 
     print(sprintf("Running FRMatch test in query: %s -> reference: %s mapping direction", query_id, ref_id))
-    rst.ref_to_query <- FRmatch(sce.query = sce.ref.norm, sce.ref = sce.query.norm, subsamp.size = 15)
+    rst.ref_to_query <- FRmatch(sce.query = sce.ref.norm, sce.ref = sce.query.norm, subsamp.size = 15, numCores = n_cores)
 
     
     ############################################ PLOTTING AND STORING RESULTS ############################################
@@ -89,20 +92,13 @@ run_FRMatch <- function(sce.query.norm, sce.ref.norm, query_id, ref_id, res_base
 
     #### plot where E1/query is x axis and E2/reference data is y axis ####
     #plot one-way and two-way match results
-    plot_bi_FRmatch(
-        rst.query_to_ref, rst.ref_to_query,
-        name.E1 = query_id, name.E2 = ref_id, filename = sprintf("%s/%s_to_%s_matching_E2E1.png", res_dir, 
-        ref_id, query_id, # since we want these plots to still get saved in the same results file
-        query_id, ref_id)
+    plot_bi_FRmatch(rst.query_to_ref, rst.ref_to_query,
+        name.E1 = query_id, name.E2 = ref_id, filename = sprintf("%s/%s_to_%s_matching_E2E1.png", res_dir, query_id, ref_id)
         ) 
     # plot two-way results only
-    plot_bi_FRmatch(
-        rst.query_to_ref, rst.ref_to_query,
+    plot_bi_FRmatch(rst.query_to_ref, rst.ref_to_query,
         name.E1 = query_id, name.E2 = ref_id, two.way.only = TRUE, 
-        filename = sprintf("%s/%s_to_%s_matching_(two-way)_E2E1.png", res_dir, 
-        ref_id, query_id, # since we want these plots to still get saved in the same results file
-        query_id, ref_id)
-        ) 
+        filename = sprintf("%s/%s_to_%s_matching_(two-way)_E2E1.png", res_dir, query_id, ref_id)) 
 }
 
 # using create_sce_object, loop through dirs and run FR-Match on non-duplicative, pairwise combinations of datasets being mapped onto each other
@@ -129,14 +125,6 @@ for (i in 1:(num_ds - 1)) {
         sce1 <- adatas[[id1]]
         sce2 <- adatas[[id2]]
         print(sprintf("=== Running FR-Match on: %s and %s ===", id1, id2))
-        runFRMatch(sce.query.norm = sce1, sce.ref.norm = sce2, query_id = id1, ref_id = id2)
+        runFRMatch(sce.query.norm = sce1, sce.ref.norm = sce2, query_id = id1, ref_id = id2, res_base_dir = results_base_dir, n_cores = n_jobs)
     }
 }
-
-# #################################################################################################
-# # scratch ground start #
-# dir <- "/data/pintardde/class_marker_pipeline/results/HLCA_Core_results/tables/"
-# markers_info <- fread(paste0(dir, "combined_markers_eval_results.csv"))
-
-# sub("_[^_]+$", "", "HLCA_Core_results")
-# # scratch ground end #
